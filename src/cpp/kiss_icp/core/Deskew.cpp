@@ -22,8 +22,6 @@
 // SOFTWARE.
 #include "Deskew.hpp"
 
-#include <tbb/parallel_for.h>
-
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <algorithm>
@@ -57,11 +55,11 @@ Vector3dVector MotionCompensator::DeSkewScan(const std::vector<Eigen::Vector3d>&
                                              const Eigen::Vector3d& linear_velocity,
                                              const Eigen::Vector3d& angular_velocity) {
     std::vector<Eigen::Vector3d> corrected_frame(frame.size());
-    tbb::parallel_for(size_t(0), frame.size(), [&](size_t i) {
+    for (size_t i = 0; frame.size(); ++i) {
         const auto& dt = timestamps[i];
         const auto motion = MakeTransform(dt * linear_velocity, dt * angular_velocity);
         corrected_frame[i] = motion * frame[i];
-    });
+    }
     return corrected_frame;
 }
 

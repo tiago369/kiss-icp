@@ -22,9 +22,6 @@
 // SOFTWARE.
 #include "VoxelHashMap.hpp"
 
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_reduce.h>
-
 #include <Eigen/Core>
 #include <algorithm>
 #include <limits>
@@ -47,14 +44,6 @@ inline void TransformPoints(const Eigen::Matrix4d &T, std::vector<Eigen::Vector3
     });
 }
 
-struct ResultTuple {
-    ResultTuple(std::size_t n) {
-        source.reserve(n);
-        target.reserve(n);
-    }
-    std::vector<Eigen::Vector3d> source;
-    std::vector<Eigen::Vector3d> target;
-};
 }  // namespace
 
 namespace kiss_icp {
@@ -131,45 +120,17 @@ VoxelHashMap::Vector3dVectorTuple VoxelHashMap::GetCorrespondences(
 
         return closest_neighbor;
     };
-    using points_iterator = std::vector<Eigen::Vector3d>::const_iterator;
-    const auto [source, target] = tbb::parallel_reduce(
-        // Range
-        tbb::blocked_range<points_iterator>{points.cbegin(), points.cend()},
-        // Identity
-        ResultTuple(points.size()),
-        // 1st lambda: Paralell computation
-        [&](const tbb::blocked_range<points_iterator> &r, ResultTuple res) -> ResultTuple {
-            auto &[src, tgt] = res;
-            auto &source_private = src;  // compile on clang
-            auto &target_private = tgt;  // compile on clang
-            source_private.reserve(r.size());
-            target_private.reserve(r.size());
-            std::for_each(r.begin(), r.end(), [&](const auto &point) {
-                Eigen::Vector3d closest_neighboors = GetClosestNeighboor(point);
-                if ((closest_neighboors - point).norm() < max_correspondance_distance) {
-                    source_private.emplace_back(point);
-                    target_private.emplace_back(closest_neighboors);
-                }
-            });
-            return res;
-        },
-        // 2st lambda: Parallell reduction
-        [&](ResultTuple a, const ResultTuple &b) -> ResultTuple {
-            auto &[src, tgt] = a;
-            auto &source = src;  // compile on clang
-            auto &target = tgt;  // compile on clang
-            const auto &[srcp, tgtp] = b;
-            auto &source_private = srcp;  // compile on clang
-            auto &target_private = tgtp;  // compile on clang
-            source.insert(source.end(),   //
-                          std::make_move_iterator(source_private.begin()),
-                          std::make_move_iterator(source_private.end()));
-            target.insert(target.end(),  //
-                          std::make_move_iterator(target_private.begin()),
-                          std::make_move_iterator(target_private.end()));
-            return a;
-        });
-
+    Vector3dVector source;
+    Vector3dVector target;
+    source.reserve(points.size());
+    target.reserve(points.size());
+    std::for_each(points.cbegin(), points.cend(), [&](const auto &point) {
+        Eigen::Vector3d closest_neighboors = GetClosestNeighboor(point);
+        if ((closest_neighboors - point).norm() < max_correspondance_distance) {
+            source.emplace_back(point);
+            target.emplace_back(closest_neighboors);
+        }
+    });
     return std::make_tuple(source, target);
 }
 

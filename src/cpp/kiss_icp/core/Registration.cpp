@@ -22,9 +22,6 @@
 // SOFTWARE.
 #include "Registration.hpp"
 
-#include <tbb/blocked_range.h>
-#include <tbb/parallel_reduce.h>
-
 #include <Eigen/Dense>
 #include <algorithm>
 #include <cmath>
@@ -43,22 +40,6 @@ inline Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d &vec) {
     // clang-format on
     return skew;
 }
-
-struct ResultTuple {
-    ResultTuple() {
-        JTJ.setZero();
-        JTr.setZero();
-    }
-
-    ResultTuple operator+(const ResultTuple &other) {
-        this->JTJ += other.JTJ;
-        this->JTr += other.JTr;
-        return *this;
-    }
-
-    Eigen::Matrix6d JTJ;
-    Eigen::Vector6d JTr;
-};
 
 Eigen::Matrix4d TransformVector6dToMatrix4d(const Eigen::Vector6d &x) {
     Eigen::Matrix4d output = Eigen::Matrix4d::Identity();
@@ -95,25 +76,15 @@ Eigen::Vector6d ComputeUpdate(const std::vector<Eigen::Vector3d> &source,
         return std::make_tuple(J_r, residual);
     };
 
-    const auto &[JTJ, JTr] = tbb::parallel_reduce(
-        // Range
-        tbb::blocked_range<size_t>{0, source.size()},
-        // Identity
-        ResultTuple(),
-        // 1st Lambda: Parallel computation
-        [&](const tbb::blocked_range<size_t> &r, ResultTuple J) -> ResultTuple {
-            auto Weight = [&](double residual2) { return square(th) / square(th + residual2); };
-            auto &[JTJ_private, JTr_private] = J;
-            for (auto i = r.begin(); i < r.end(); ++i) {
-                const auto &[J_r, r] = compute_jacobian_and_residual(i);
-                const double w = Weight(r.squaredNorm());
-                JTJ_private.noalias() += J_r.transpose() * w * J_r;
-                JTr_private.noalias() += J_r.transpose() * w * r;
-            }
-            return J;
-        },
-        // 2nd Lambda: Parallel reduction of the private Jacboians
-        [&](ResultTuple a, const ResultTuple &b) -> ResultTuple { return a + b; });
+    Eigen::Matrix6d JTJ = Eigen::Matrix6d::Zero();
+    Eigen::Vector6d JTr = Eigen::Vector6d::Zero();
+    auto Weight = [&](double residual2) { return square(th) / square(th + residual2); };
+    for (auto i = 0; i < source.size(); ++i) {
+        const auto &[J_r, r] = compute_jacobian_and_residual(i);
+        const double w = Weight(r.squaredNorm());
+        JTJ.noalias() += J_r.transpose() * w * J_r;
+        JTr.noalias() += J_r.transpose() * w * r;
+    }
 
     return JTJ.ldlt().solve(-JTr);
 }
