@@ -21,7 +21,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 cmake_minimum_required(VERSION 3.16...3.24)
-project(kiss_icp VERSION 0.1.2 LANGUAGES CXX)
+project(kiss_icp VERSION 0.1.3 LANGUAGES CXX)
 
 # Setup build options
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed eigen3" ON)
@@ -36,4 +36,6 @@ include(cmake/CompilerOptions.cmake)
 
 add_subdirectory(core)
 add_subdirectory(metrics)
-add_subdirectory(pipeline)
+if(NOT BUILD_PYTHON_BINDINGS)
+  add_subdirectory(pipeline)
+endif()
