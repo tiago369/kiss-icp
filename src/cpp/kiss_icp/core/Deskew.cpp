@@ -60,8 +60,8 @@ Vector3dVector MotionCompensator::DeSkewScan(const std::vector<Eigen::Vector3d> 
     });
 
     std::vector<Eigen::Vector3d> corrected_frame(frame.size());
-    for (size_t i = 0; frame.size(); ++i) {
-        const auto &dt = timestamps_[i];
+    for (size_t i = 0; i < frame.size(); ++i) {
+        const auto dt = timestamps_[i];
         const auto motion = MakeTransform(dt * lvel, dt * avel);
         corrected_frame[i] = motion * frame[i];
     }
