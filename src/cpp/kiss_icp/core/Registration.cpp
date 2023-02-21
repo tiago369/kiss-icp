@@ -47,7 +47,6 @@ inline Eigen::Matrix3d SkewMatrix(const Eigen::Vector3d &vec) {
     return skew;
 }
 
-
 }  // namespace
 
 namespace kiss_icp {
