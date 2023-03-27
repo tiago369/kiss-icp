@@ -24,15 +24,17 @@ include(ExternalProject)
 ExternalProject_Add(
   external_sophus
   PREFIX sophus
-  URL https://github.com/strasdat/Sophus/archive/refs/tags/1.22.10.tar.gz
+  # Uncomment after https://github.com/strasdat/Sophus/pull/502 gets merged
+  # URL https://github.com/strasdat/Sophus/archive/refs/tags/1.22.10.tar.gz
+  URL https://github.com/nachovizzo/Sophus/archive/refs/tags/1.22.11.tar.gz
   UPDATE_COMMAND ""
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-             -DSOPHUS_USE_BASIC_LOGGING=ON 
+             -DSOPHUS_USE_BASIC_LOGGING=ON
              -DBUILD_SOPHUS_EXAMPLES=OFF
-             -DBUILD_SOPHUS_TESTS=OFF 
+             -DBUILD_SOPHUS_TESTS=OFF
              -DCMAKE_BUILD_TYPE=Release)
 
 ExternalProject_Get_Property(external_sophus SOURCE_DIR)
