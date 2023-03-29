@@ -57,9 +57,9 @@ Sophus::SE3d AlignClouds(const std::vector<Eigen::Vector3d> &source,
     Eigen::Matrix6d JTJ = Eigen::Matrix6d::Zero();
     Eigen::Vector6d JTr = Eigen::Vector6d::Zero();
     auto Weight = [&](double residual2) { return square(th) / square(th + residual2); };
-    for (auto i = 0; i < source.size(); ++i) {
+    for (size_t i = 0; i < source.size(); ++i) {
         const auto &[J_r, residual] = compute_jacobian_and_residual(i);
-        const double w = Weight(r.squaredNorm());
+        const double w = Weight(residual.squaredNorm());
         JTJ.noalias() += J_r.transpose() * w * J_r;
         JTr.noalias() += J_r.transpose() * w * residual;
     }
