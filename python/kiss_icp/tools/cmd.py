@@ -29,6 +29,7 @@ import typer
 
 from kiss_icp.datasets import (
     available_dataloaders,
+    jumpable_dataloaders,
     sequence_dataloaders,
     supported_file_extensions,
 )
@@ -56,15 +57,25 @@ def guess_dataloader(data: Path, default_dataloader: str):
         bagfiles = [Path(path) for path in glob.glob(os.path.join(data, "*.bag"))]
         if len(bagfiles) > 0:
             return "rosbag", bagfiles
-    return default_dataloader
+    return default_dataloader, data
 
 
 def version_callback(value: bool):
     if value:
+        try:
+            # Check that the python bindings are properly built and can be loaded at runtime
+            from kiss_icp.pybind import kiss_icp_pybind
+        except ImportError as e:
+            print(80 * "*")
+            print(f"[ERRROR] Python bindings not properly built! Please open a issue on github")
+            print(f"[ERRROR] '{e}'")
+            print(80 * "*")
+            raise typer.Exit(1)
+
         import kiss_icp
 
         print(f"KISS-ICP Version: {kiss_icp.__version__}")
-        raise typer.Exit()
+        raise typer.Exit(0)
 
 
 def name_callback(value: str):
@@ -206,6 +217,10 @@ def kiss_icp_pipeline(
     if dataloader in sequence_dataloaders() and sequence is None:
         print('You must specify a sequence "--sequence"')
         raise typer.Exit(code=1)
+
+    if jump != 0 and dataloader not in jumpable_dataloaders():
+        print(f"[WARNING] '{dataloader}' does not support '--jump', starting from first frame")
+        jump = 0
 
     # Lazy-loading for faster CLI
     from kiss_icp.datasets import dataset_factory
