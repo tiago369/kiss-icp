@@ -71,6 +71,9 @@ private:
     /// Global/map coordinate frame.
     std::string odom_frame_{"odom"};
     std::string child_frame_{"base_link"};
+
+    /// Activate TF publish
+    bool publish_tf = true;
 };
 
 }  // namespace kiss_icp_ros
